@@ -27,6 +27,24 @@ class Model():
     def equilibrium(self):
         return self.feq
 
+    @property
+    def drag(self):
+        density = self.rho_in
+        diameter = self.shape[1] / 6
+        return np.abs(self.force_on_obstacle[0]) / (0.5 * density * np.mean(self.u[0, 0])**2 * diameter)
+
+    @property
+    def force_on_obstacle(self):
+        s = 0
+        for cell in np.argwhere(self.boundary):
+            for k in range(9):
+                e = v[8 - k] 
+                ce = cell + e
+                if not self.obstacle[ce[0], ce[1]]:
+                    s += e * (self.fin[k, cell[0], cell[1]] + self.fin[8-k, ce[0], ce[1]])
+
+        return s
+
     def __init__(self, Re=220, shape=(210, 90), obstacle='circle'):
 
         self.Re = Re
@@ -57,6 +75,20 @@ class Model():
                 return x != x
 
         self.obstacle = np.fromfunction(fun, self.shape)
+
+        oy = np.diff(self.obstacle.astype(int), axis=0)
+        woy = np.where(oy == -1)
+
+        ox = np.diff(self.obstacle.astype(int), axis=1)
+        wox = np.where(ox == -1)
+
+        boundary = np.zeros(self.obstacle.shape, dtype=bool)
+        boundary[wox[0], wox[1]-1] = True
+        boundary[woy[0] - 1, woy[1]] = True
+        boundary[np.where(oy == 1)] = True
+        boundary[np.where(ox == 1)] = True
+
+        self.boundary = boundary
 
         def inivel(d, x, y):
             return (1-d) * self.uLB * (1 + 1e-4*np.sin(y/(self.shape[1]-1)*2*np.pi))
@@ -89,15 +121,15 @@ class Model():
 
         # Left wall: inflow condition.
         self.u[:,0,:] = self.vel[:,0,:]
-        self.rho[0,:] = self.rho_in
+        # self.rho[0,:] = self.rho_in
 
         # Right wall again
-        self.u[:,-1,:] = self.vel[:,-1,:]
+        # self.u[:,-1,:] = self.vel[:,-1,:]
         self.rho[-1, :] = self.rho_out
 
         # Compute equilibrium.
         self.update_equilibrium()
-        self.fin[[0,1,2],0,:] = self.feq[[0,1,2],0,:] + self.fin[[8,7,6],0,:] - self.feq[[8,7,6],0,:]
+        # self.fin[[0,1,2],0,:] = self.feq[[0,1,2],0,:] + self.fin[[8,7,6],0,:] - self.feq[[8,7,6],0,:]
 
         # Does not behave nice with setting rho and u manually
         # self.fin[[6,7,8],-1,:] = self.feq[[6,7,8],-1,:] + self.fin[[2,1,0],-1,:] - self.feq[[6,7,8],-1,:]

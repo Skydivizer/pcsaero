@@ -141,7 +141,7 @@ def mouse_motion(x, y):
             for j in range(jlast, jnext + 1):
                 model.obstacle[i, j] = draw_solid_flag
         else:
-            solid[i, jlast] = draw_solid_flag
+            model.obstacle[i, jlast] = draw_solid_flag
             for j in range(jnext, jlast + 1):
                 model.obstacle[i, j] = draw_solid_flag
 
@@ -169,6 +169,7 @@ def idle():
         previousTime = currentTime
         frameCount = 0.0
         glutSetWindowTitle(name + " - " + str(fps) + "FPS")    
+        print(model.drag)
 
     glutPostRedisplay()
 
@@ -236,7 +237,7 @@ name = 'Aerodynamics Test'
 frameCount, previousTime = 0.0, 0.0  # FPS counter vars
 show = 'velocity'
 showi = 0
-paused = 'False'
+paused = False
 plot_rgba = None
 model = None
 nx, ny = None, None
@@ -272,10 +273,11 @@ key_action_map = {
 parser = argparse.ArgumentParser()
 parser.add_argument("nx", help='width of lattice grid', type=int)
 parser.add_argument("ny", help='height of lattice grid', type=int)
+parser.add_argument("Re", help='Reynolds number', type=float)
 parser.add_argument("shape", help='shape of object', type=str, choices=['square', 'circle', 'wall', 'none'])
 args = parser.parse_args()
 
-model = lbm.Model(shape=(args.nx, args.ny), obstacle=args.shape)
+model = lbm.Model(shape=(args.nx, args.ny), Re=args.Re, obstacle=args.shape)
 nx, ny = model.shape
 plot_rgba = np.zeros(np.prod(model.shape), dtype=np.uint32)
 cmap_rgba, ncol = get_cmap_from_matplotlib()
