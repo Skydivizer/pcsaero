@@ -1,91 +1,137 @@
+"""Defines the obstacle creation"""
 import numpy as np
+
+from skimage.draw import circle, polygon
 from scipy.ndimage.filters import minimum_filter, maximum_filter
 
+import util
+
+# Just for convenience
 l_and, l_not = np.logical_and, np.logical_not
 
+# Collection of names that can be passed to the Obstacle.create function
+# i.e. the names that can be passed by command line arguments
 circle_names = ('circle', 'c', 'sphere')
 rect_names = ('rectangle', 'rect', 'r', 'square', 'block', 'b', 'cube')
 half_circle_names = ('half-circle', 'halfcircle', 'hc', 'semi-circle',
                      'semicircle', 'sc', 'half-sphere', 'halfsphere', 'hs',
                      'semi-sphere', 'semisphere', 'ss')
-angled_square_names = ('angled-square', 'as', 'a', 'angledsquare',
-                       'angled-block', 'angledblock', 'ab', 'angled-cube',
-                       'angledcube', 'ac')
 triangle_names = ('triangle', 't', 'cone')
+moon_names = ('moon', 'm')
+
 none_names = ('none', 'n', 'empty', '0')
-
-names_lists = (circle_names, rect_names, half_circle_names,
-               angled_square_names, triangle_names, none_names)
-names = [l[0] for l in names_lists]
-names_map = {n: l[0] for l in names_lists for n in l}
-
-
-def names_type(string):
-    string = str.lower(string)
-    try:
-        return names_map[string]
-    except KeyError:
-        raise TypeError(string, 'not a known obstacle name')
+names_lists = (circle_names, rect_names, half_circle_names, triangle_names,
+               moon_names, none_names)
 
 
 class Obstacle(object):
-    def __init__(self, nx, ny, func=None):
+    "Obstacles define the mask of cells that are solid in the lbm simulation."
 
-        self.nx = nx
-        self.ny = ny
+    def __init__(self, mask):
+        self.nx, self.ny = mask.shape
 
-        if func == None:
-            self.mask = np.zeros((self.nx, self.ny), dtype=bool)
-        else:
-            self.mask = np.fromfunction(func, (self.nx, self.ny))
+        self.mask = mask
 
         self.inner_border = l_and(self.mask,
                                   l_not(minimum_filter(self.mask, 3)))
         self.outer_border = l_and(
             maximum_filter(self.mask, 3), l_not(self.mask))
 
-    def add(self, other):
-        self.mask |= other.mask
-
     @classmethod
-    def create(cls, name, nx, ny, X=1 / 3, Y=1 / 2, D=1 / 8, W=1 / 8):
-        cx = nx * X
-        cy = ny * Y
+    def create(cls, name, nx, ny, X=0.5, Y=0.5, D=0.125, W=0.125, theta=0):
+        """Create a new obstacle by its name, the domain dimensions and it its
+        properties.
+
+        Arguments:
+            name: Name of the obstacle, e.g. 'circle' or 'triangle'
+            nx: number of cells in a row
+            ny: number of cells in a column
+            X: x-center of the obstacle as proportion of nx
+            Y: y-center of the obstacle as proportion of ny
+            D: diameter / height of the object as propertion of ny
+            W: width of the object as propertion of nx
+            theta: angle of aproach in degrees
+
+        Note:
+            D, W are not necessarily the height of width of the object, e.g.
+            a triangle is only half the width of W.
+        """
+        mask = np.zeros((nx, ny), dtype=bool)
+
+        theta = theta * (np.pi / 180)
+
+        # Calculate coords to grid coords
+        cx = (nx - 1) * X
+        cy = (ny - 1) * Y
         d = D * ny / 2
         w = W * ny / 2
 
-        name = name
 
-        if name in rect_names:
+        if name in circle_names:
+            # Circle can simply be drawn with skimage
+            ox, oy = circle(cx, cy, d)
+            mask[ox, oy] = True
 
-            def func(x, y):
-                return l_and(np.abs(x - cx) < w, np.abs(y - cy) < d)
-        elif name in circle_names:
+        elif name in rect_names:
+            # Define rectangle coords and rotate them
+            x = np.array([[cx - w, cx - w, cx + w, cx + w],
+                          [cy - d, cy + d, cy + d, cy - d]])
+            x = util.rotate(x, theta, (cx, cy))
 
-            def func(x, y):
-                return (x - cx)**2 + (y - cy)**2 <= d**2
-        elif name in half_circle_names:
+            # Draw polygon with skimage
+            ox, oy = polygon(x[0], x[1])
+            mask[ox, oy] = True
 
-            def func(x, y):
-                return l_and((x - cx)**2 + (y - cy)**2 <= d**2, x - cx <= 0)
         elif name in triangle_names:
+            # Horiziontal offset
+            xo = w / 2
 
-            def func(x, y):
-                lx = cx - w
-                return l_and(np.abs(x - cx) < w, np.abs(y - cy) < (x - lx) / 2)
+            # Define coords and rotate them
+            x = np.array([[cx - xo, cx + xo, cx + xo], [cy, cy + d, cy - d]])
+            x = util.rotate(x, theta, (cx, cy))
 
-        elif name in angled_square_names:
+            # Draw polygon with skimage
+            ox, oy = polygon(x[0], x[1])
+            mask[ox, oy] = True
 
-            def func(x, y):
-                lx = cx - w
-                rx = cx + w
-                dy = np.abs(y - cy)
-                return l_and(
-                    np.abs(x - cx) < w, l_and(dy < (x - lx), dy < (rx - x)))
+        elif name in half_circle_names:
+            # A circle is created by creating a circle and removing a
+            # rectangular polygon which is rotated.
+
+            # Create circle
+            ox, oy = circle(cx, cy, d)
+            mask[ox, oy] = True
+
+            # Remove rectangle
+            x = np.array([[cx, cx, cx + w, cx + w],
+                          [cy - d, cy + d, cy + d, cy - d]])
+            x = util.rotate(x, theta, (cx, cy))
+            oxx, oyy = polygon(x[0], x[1])
+            mask[oxx, oyy] = False
+
+        elif name in moon_names:
+            # The moon like shape is created with a circle, removing a inner
+            # smaller circle and removing half of the remainder with a
+            # rectangular polyong as with the half circle.
+
+            # Create circle
+            ox, oy = circle(cx, cy, d)
+            mask[ox, oy] = True
+
+            # Remove inner circle
+            oxx, oyy = circle(cx, cy, d * 0.8)
+            mask[oxx, oyy] = False
+
+            # Remove rectangle
+            x = np.array([[cx, cx, cx + w, cx + w],
+                          [cy - d, cy + d, cy + d, cy - d]])
+            x = util.rotate(x, theta, (cx, cy))
+            oxx, oyy = polygon(x[0], x[1])
+            mask[oxx, oyy] = False
 
         elif name in none_names:
-            func = None
+            pass
         else:
             raise ValueError("Unknown obstacle name", name)
 
-        return cls(nx, ny, func)
+        return cls(mask)

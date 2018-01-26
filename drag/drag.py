@@ -9,6 +9,20 @@ import gui
 import models
 import obstacles
 
+# To not overflow the help interface of arugment parser only the main obstacle
+# names are # shown as possible options
+onames = [l[0] for l in obstacles.names_lists]
+onames_map = {n: l[0] for l in obstacles.names_lists for n in l}
+
+# Defines the type for argument parser
+def onames_type(string):
+    string = str.lower(string)
+    try:
+        return onames_map[string]
+    except KeyError:
+        raise TypeError(string, 'not a known obstacle name')
+
+
 if __name__ == "__main__":
 
     # Handle command line arguments
@@ -36,12 +50,19 @@ if __name__ == "__main__":
         "-o",
         "--obstacle",
         help='The obstacle to calculate the drag coefficient of.',
-        type=obstacles.names_type,
-        choices=obstacles.names,
-        default=obstacles.names[0])
+        type=onames_type,
+        choices=onames,
+        default=onames[0])
 
     parser.add_argument(
-        '-t',
+        "-t",
+        "--theta",
+        type=float,
+        help="Angle of approach in degrees",
+        default=0)
+
+    parser.add_argument(
+        '-T',
         '--time',
         type=float,
         help="Runs the simulation without a graphical user interface for a "
@@ -54,7 +75,7 @@ if __name__ == "__main__":
         "mrt": models.MRT,
         "pylbm": models.PyLBM,
     }[args.model](
-        Re=args.reynolds, resolution=args.resolution, obstacle=args.obstacle)
+        Re=args.reynolds, resolution=args.resolution, obstacle=args.obstacle, theta=args.theta)
 
     # Run the simulation
     if not args.time:
@@ -63,4 +84,4 @@ if __name__ == "__main__":
         while (model.t < args.time):
             model.step()
 
-        print(model.drag_coefficient)
+        print(model.drag_coefficient, model.lift_coefficient)

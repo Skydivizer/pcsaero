@@ -10,11 +10,11 @@ _w = w[:, np.newaxis, np.newaxis]
 
 
 class Model(abc.ABC):
-    def __init__(self, Re=100, resolution=128, obstacle='circle'):
+    def __init__(self, Re=100, resolution=128, obstacle='circle', theta=0):
         self.Re = Re
         self.N = resolution
         self.shape = (self.N, self.N)
-        self._obstacle = obstacles.Obstacle.create(obstacle, self.N, self.N)
+        self._obstacle = obstacles.Obstacle.create(obstacle, self.N, self.N, theta=theta)
 
         self.init()
 
@@ -68,7 +68,7 @@ class Model(abc.ABC):
 class SRT(Model):
 
     def init(self):
-        self.Uin = 0.1
+        self.Uin = 0.04
         self.nu = self.Uin * self.N / (self.Re * 8)
 
         self.dx = 1 / self.N
@@ -95,23 +95,24 @@ class SRT(Model):
     def step(self):
         self.t += self.dt
 
-        self.stream()
+        fin = self.f
+
+        fin[col_W, -1, 1:-1] = fin[col_W, -2, 1:-1]
         self.update_macroscopic()
-
-        # All the clipping is done to attempt stabilizing the sim..
-        # Yet trouble still occurs somehow
-        # self.rho = np.clip(self.rho, 0, 2)
-        # self.u = np.clip(self.u, -1 / np.sqrt(3), 1 / np.sqrt(3))
-
-        # Const inlet velocity + pressure
         self.u[0, 0, 1:-1] = self.Uin
-        self.rho[0, :] = 1
-
+        self.u[1, 0, 1:-1] = 0
+        self.rho[0,1:-1] = 1 / (1 - self.u[0,0,1:-1]) * (np.sum(fin[col_C, 0, 1:-1], axis=0) + 2 *np.sum(fin[col_W,0,1:-1], axis=0))
         self.update_equilibrium()
-
-        # Again
-        self.feq = np.clip(self.feq, 0, 2)
+        fin[col_E, 0, 1:-1] = self.feq[col_E, 0, 1:-1] + fin[col_Em,0,1:-1] - self.feq[col_Em,0,1:-1]
         self.collide()
+        fout = self.f
+
+        for k in range(9):
+            fout[k, self.obstacle] = fin[idx_M[k], self.obstacle]
+            fout[k, :, 0] = fin[idx_M[k], :, 0]
+            fout[k, :, -1] = fin[idx_M[k], :, -1]
+
+        self.stream()
 
     def collide(self):
 
@@ -123,20 +124,20 @@ class SRT(Model):
 
     def stream(self):
 
-        fin = self.f.copy()
+        # fin = self.f.copy()
         f = self.f
 
         for i in range(9):
             f[i,:,:] = np.roll(np.roll(f[i,:,:], e[i,0], axis=0), e[i,1], axis=1)
 
-        for k in range(9):
-            f[k, self.obstacle] = fin[idx_M[k], self.obstacle]
+        # for k in range(9):
+        #     f[k, self.obstacle] = fin[idx_M[k], self.obstacle]
 
             # f[k, :, 0] = fin[idx_M[k], :, 0]
             # f[k, :, -1] = fin[idx_M[k], :, -1]
 
-        f[:, 0,  1:-1] = self.f_in[:, 1:-1] * ( 1 + 1e-3 * np.random.randn(self.N - 2) )
-        f[:, -1, 1:-1] = fin[:, -2, 1:-1]
+        # f[:, 0,  1:-1] = self.f_in[:, 1:-1] * ( 1 + 1e-3 * np.random.randn(self.N - 2) )
+        # f[:, -1, 1:-1] = fin[:, -2, 1:-1]
 
     def update_equilibrium(self):
         rho = self.rho
@@ -177,8 +178,15 @@ class SRT(Model):
     def drag_coefficient(self):
         Fx = self.force[0]
         Uin = self.Uin 
-        D = 1/16 * self.N
+        D = 1/8 * self.N
         return np.abs(Fx) / (0.5 * Uin**2 * D)
+
+    @property
+    def lift_coefficient(self):
+        Fy = self.force[1]
+        Uin = self.Uin 
+        D = 1/8 * self.N
+        return Fy / (0.5 * Uin**2 * D)
 
     @property
     def force(self):

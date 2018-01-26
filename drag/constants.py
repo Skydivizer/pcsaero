@@ -27,8 +27,10 @@ idx_M = {
 }
 
 col_E = np.array([idx_NE, idx_E, idx_SE])
-col_Em = np.array([idx_M[i] for i in col_E])
+col_C = np.array([idx_N, idx_C, idx_S])
 col_W = np.array([idx_NW, idx_W, idx_SW])
 
 row_N = np.array([idx_NE, idx_N, idx_NW])
+
+col_Em = np.array([idx_M[i] for i in col_E])
 row_Nm = np.array([idx_M[i] for i in row_N])
