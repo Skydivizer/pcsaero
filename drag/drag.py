@@ -84,4 +84,11 @@ if __name__ == "__main__":
         while (model.t < args.time):
             model.step()
 
-        print(model.drag_coefficient, model.lift_coefficient)
+        cd = []
+        ld = []
+        for i in range(10):
+            cd.append(model.drag_coefficient)
+            ld.append(model.lift_coefficient)
+
+        import numpy as np
+        print(np.mean(cd), np.mean(ld))

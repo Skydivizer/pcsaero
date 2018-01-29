@@ -18,10 +18,44 @@ half_circle_names = ('half-circle', 'halfcircle', 'hc', 'semi-circle',
                      'semi-sphere', 'semisphere', 'ss')
 triangle_names = ('triangle', 't', 'cone')
 moon_names = ('moon', 'm')
+bullet_names = ('bullet', 'b')
 
 none_names = ('none', 'n', 'empty', '0')
 names_lists = (circle_names, rect_names, half_circle_names, triangle_names,
-               moon_names, none_names)
+               moon_names, bullet_names, none_names)
+
+
+def set_circle(mask, cx, cy, d, val=True):
+    # Circle can simply be drawn with skimage
+    ox, oy = circle(cx, cy, d)
+    mask[ox, oy] = val
+
+
+def set_rect(mask, cx, cy, d, w, theta, val=True, left=None):
+    l = r = w
+    if left != None:
+        l = left
+    # Define rectangle coords and rotate them
+    x = np.array([[cx - l, cx - l, cx + r, cx + r],
+                  [cy - d, cy + d, cy + d, cy - d]])
+    x = util.rotate(x, theta, (cx, cy))
+
+    # Draw polygon with skimage
+    ox, oy = polygon(x[0], x[1])
+    mask[ox, oy] = val
+
+
+def set_triangle(mask, cx, cy, d, w, theta, val=True):
+    # Horiziontal offset
+    xo = w / 2
+
+    # Define coords and rotate them
+    x = np.array([[cx - xo, cx + xo, cx + xo], [cy, cy + d, cy - d]])
+    x = util.rotate(x, theta, (cx, cy))
+
+    # Draw polygon with skimage
+    ox, oy = polygon(x[0], x[1])
+    mask[ox, oy] = val
 
 
 class Obstacle(object):
@@ -37,8 +71,11 @@ class Obstacle(object):
         self.outer_border = l_and(
             maximum_filter(self.mask, 3), l_not(self.mask))
 
+        w = np.where(self.mask)[1]
+        self.D = np.max(w) - np.min(w) + 1
+
     @classmethod
-    def create(cls, name, nx, ny, X=0.5, Y=0.5, D=0.125, W=0.125, theta=0):
+    def create(cls, name, nx, ny, X=2 / 5, Y=0.5, D=0.125, W=0.125, theta=0):
         """Create a new obstacle by its name, the domain dimensions and it its
         properties.
 
@@ -66,71 +103,37 @@ class Obstacle(object):
         d = D * ny / 2
         w = W * ny / 2
 
-
         if name in circle_names:
-            # Circle can simply be drawn with skimage
-            ox, oy = circle(cx, cy, d)
-            mask[ox, oy] = True
+            set_circle(mask, cx, cy, d)
 
         elif name in rect_names:
-            # Define rectangle coords and rotate them
-            x = np.array([[cx - w, cx - w, cx + w, cx + w],
-                          [cy - d, cy + d, cy + d, cy - d]])
-            x = util.rotate(x, theta, (cx, cy))
-
-            # Draw polygon with skimage
-            ox, oy = polygon(x[0], x[1])
-            mask[ox, oy] = True
+            set_rect(mask, cx, cy, d, w, theta)
 
         elif name in triangle_names:
-            # Horiziontal offset
-            xo = w / 2
-
-            # Define coords and rotate them
-            x = np.array([[cx - xo, cx + xo, cx + xo], [cy, cy + d, cy - d]])
-            x = util.rotate(x, theta, (cx, cy))
-
-            # Draw polygon with skimage
-            ox, oy = polygon(x[0], x[1])
-            mask[ox, oy] = True
+            set_triangle(mask, cx, cy, d, w, theta)
 
         elif name in half_circle_names:
             # A circle is created by creating a circle and removing a
             # rectangular polygon which is rotated.
-
-            # Create circle
-            ox, oy = circle(cx, cy, d)
-            mask[ox, oy] = True
-
-            # Remove rectangle
-            x = np.array([[cx, cx, cx + w, cx + w],
-                          [cy - d, cy + d, cy + d, cy - d]])
-            x = util.rotate(x, theta, (cx, cy))
-            oxx, oyy = polygon(x[0], x[1])
-            mask[oxx, oyy] = False
+            set_circle(mask, cx, cy, d)
+            set_rect(mask, cx, cy, d, w, theta, val=False, left=0)
 
         elif name in moon_names:
             # The moon like shape is created with a circle, removing a inner
             # smaller circle and removing half of the remainder with a
             # rectangular polyong as with the half circle.
+            set_circle(mask, cx, cy, d)
+            set_circle(mask, cx, cy, d * 0.5, False)
+            set_rect(mask, cx, cy, d, w, theta, val=False, left=0)
 
-            # Create circle
-            ox, oy = circle(cx, cy, d)
-            mask[ox, oy] = True
-
-            # Remove inner circle
-            oxx, oyy = circle(cx, cy, d * 0.8)
-            mask[oxx, oyy] = False
-
-            # Remove rectangle
-            x = np.array([[cx, cx, cx + w, cx + w],
-                          [cy - d, cy + d, cy + d, cy - d]])
-            x = util.rotate(x, theta, (cx, cy))
-            oxx, oyy = polygon(x[0], x[1])
-            mask[oxx, oyy] = False
+        elif name in bullet_names:
+            # Bullet is simple a circle plus a half rectangle
+            set_circle(mask, cx, cy, d)
+            set_rect(mask, cx, cy, d, w, theta, left=0)
 
         elif name in none_names:
             pass
+
         else:
             raise ValueError("Unknown obstacle name", name)
 
