@@ -1,4 +1,6 @@
-"""This file is heaviliy based on the sample provided by Dr Gabor.
+"""This module defines the graphical display of the models using opengl
+
+This file is heaviliy based on the sample provided by Dr Gabor.
 """
 
 import sys
@@ -9,6 +11,26 @@ from matplotlib import cm
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
+
+# Constants, Globals
+name = 'Drag'  # Window name
+frameCount, previousTime = 0.0, 0.0  # FPS counter vars
+show = 'velocity'  # what variable to show
+showi = 0  # what index to show in multi dim variables
+paused = False
+plot_rgba = None
+model = None  # global pointer to running model
+nx, ny = None, None
+
+# show to variable mapping
+get_var_map = {
+    'velocity': lambda: model.velocity.T.flatten(),
+    'density': lambda: model.density.T.flatten(),
+    'population': lambda: model.population[showi % 9].T.flatten(),
+    'equilibrium': lambda: model.equilibrium[showi % 9].T.flatten(),
+    'force': lambda: model.force[showi % 2].T.flatten(),
+}
+
 
 def get_cmap_from_matplotlib(cmap=cm.coolwarm):
     # Create colormap for OpenGL plotting
@@ -21,6 +43,7 @@ def get_cmap_from_matplotlib(cmap=cm.coolwarm):
             int(255.0) << 24 | (int(float(r) * 255.0) << 16) | (
                 int(float(g) * 255.0) << 8) | (int(float(b) * 255.0) << 0))
     return np.array(cmap_rgba), len(cmap_rgba)
+
 
 def display():
     plotvar = get_var_map[show]()
@@ -82,76 +105,6 @@ def resize(w, h):
     glLoadIdentity()
 
 
-### We do not need this, also throws errors -> need to check whether cursor in window
-
-# def mouse(button, state, x, y):
-#     global draw_solid_flag, ipos_old, jpos_old
-#     if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
-#         draw_solid_flag = 0
-#         xx = x
-#         yy = y
-#         ipos_old = int(float(xx) / width * float(nx))
-#         jpos_old = int(float(height - yy) / height * float(ny))
-
-#     if button == GLUT_RIGHT_BUTTON and state == GLUT_DOWN:
-#         draw_solid_flag = 1
-#         xx = x
-#         yy = y
-#         ipos_old = int(float(xx) / width * float(nx))
-#         jpos_old = int(float(height - yy) / height * float(ny))
-
-
-# def mouse_motion(x, y):
-#     '''
-#     GLUT call back for when the mouse is moving
-#     This sets the solid array to draw_solid_flag as set in the mouse callback
-#     It will draw a staircase line if we move more than one pixel since the
-#     last callback - that makes the coding a bit cumbersome:
-#     '''
-#     global ipos_old, jpos_old
-
-#     xx = x
-#     yy = y
-#     ipos = int(float(xx) / width * float(nx))
-#     jpos = int(float(height - yy) / height * float(ny))
-
-#     if ipos <= ipos_old:
-#         i1 = ipos
-#         i2 = ipos_old
-#         j1 = jpos
-#         j2 = jpos_old
-
-#     else:
-#         i1 = ipos_old
-#         i2 = ipos
-#         j1 = jpos_old
-#         j2 = jpos
-
-#     jlast = j1
-
-#     for i in range(i1, i2 + 1):
-#         if i1 != i2:
-#             frac = (i - i1) / (i2 - i1)
-#             jnext = int((frac * (j2 - j1)) + j1)
-#         else:
-#             jnext = j2
-
-#         if jnext >= jlast:
-#             model.obstacle[i, jlast] = draw_solid_flag
-
-#             for j in range(jlast, jnext + 1):
-#                 model.obstacle[i, j] = draw_solid_flag
-#         else:
-#             model.obstacle[i, jlast] = draw_solid_flag
-#             for j in range(jnext, jlast + 1):
-#                 model.obstacle[i, j] = draw_solid_flag
-
-#         jlast = jnext
-
-#     ipos_old = ipos
-#     jpos_old = jpos
-
-
 def idle():
     global frameCount, previousTime
 
@@ -170,29 +123,37 @@ def idle():
         previousTime = currentTime
         frameCount = 0.0
         drag = model.drag_coefficient
-        glutSetWindowTitle("Drag {:0.3f} Time {:0.3f}".format(drag, model.time))
+        glutSetWindowTitle("Drag {:0.3f} Time {:0.3f}".format(
+            drag, model.time))
         # print()
 
     glutPostRedisplay()
 
+
+### IO functions
 def toggle_pause():
     global paused
     paused = not paused
 
+
 def set_show(val):
     global show
-    show = val
+    if val in get_var_map:
+        show = val
+
 
 def set_showi(val):
     global showi
     showi = val
+
 
 def keyboard(*args):
     try:
         key_action_map[args[0]]()
     except KeyError:
         pass
-    
+
+
 def run_opengl():
     # OpenGL setup
     glutInit(name)
@@ -233,24 +194,7 @@ def run_opengl():
     glutMainLoop()
 
 
-# Constants, Globals
-name = 'Drag'
-frameCount, previousTime = 0.0, 0.0  # FPS counter vars
-show = 'velocity'  # show what variable
-showi = 0  # show what index in multi dim variables
-paused = False
-plot_rgba = None
-model = None
-nx, ny = None, None
-
-get_var_map = {
-    'velocity': lambda: model.velocity.T.flatten(),
-    'density': lambda: model.density.T.flatten(),
-    'population': lambda: model.population[showi % 9].T.flatten(),
-    'equilibrium': lambda: model.equilibrium[showi % 9].T.flatten(),
-    'force': lambda: model.force[showi % 2].T.flatten(),
-}
-
+# key to action mapping
 key_action_map = {
     b'p': toggle_pause,
     b'r': lambda: model.reset(),
@@ -272,6 +216,7 @@ key_action_map = {
     b'8': lambda: set_showi(8),
     b'\x1b': lambda: sys.exit()
 }
+
 
 def run(model_):
     # Setup this module with given model.

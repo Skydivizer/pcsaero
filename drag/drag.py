@@ -14,6 +14,7 @@ import obstacles
 onames = [l[0] for l in obstacles.names_lists]
 onames_map = {n: l[0] for l in obstacles.names_lists for n in l}
 
+
 # Defines the type for argument parser
 def onames_type(string):
     string = str.lower(string)
@@ -37,7 +38,7 @@ if __name__ == "__main__":
         "[mrt] multiple relaxation times [pylbm] mrt model that wraps pyLBM",
         type=str.lower,
         choices=['srt', 'mrt', 'pylbm'],
-        default='srt')
+        default='mrt')
     parser.add_argument(
         "-r",
         "--resolution",
@@ -45,7 +46,7 @@ if __name__ == "__main__":
         type=int,
         default=64)
     parser.add_argument(
-        "-R", "--reynolds", help='Reynolds number', type=float, default=500)
+        "-R", "--reynolds", help='Reynolds number', type=float, default=220)
     parser.add_argument(
         "-o",
         "--obstacle",
@@ -67,6 +68,22 @@ if __name__ == "__main__":
         type=float,
         help="Runs the simulation without a graphical user interface for a "
         "specified simulation time.")
+
+    parser.add_argument(
+        '-u',
+        '--stream_velocity',
+        type=float,
+        help="Base stream lattice velocity, reasonable values are in the "
+        "interval [0.01, 0.15]",
+        default=0.1)
+
+    parser.add_argument(
+        '-s',
+        '--size',
+        type=float,
+        help='Reference size (height) of obstacle in characteristic units.',
+        default=1 / 8)
+
     args = parser.parse_args()
 
     # Create the model
@@ -75,7 +92,12 @@ if __name__ == "__main__":
         "mrt": models.MRT,
         "pylbm": models.PyLBM,
     }[args.model](
-        Re=args.reynolds, resolution=args.resolution, obstacle=args.obstacle, theta=args.theta)
+        Re=args.reynolds,
+        resolution=args.resolution,
+        obstacle=args.obstacle,
+        theta=args.theta,
+        Uin=args.stream_velocity,
+        size=args.size)
 
     # Run the simulation
     if not args.time:
