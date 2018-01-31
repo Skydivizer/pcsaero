@@ -4,8 +4,8 @@ import numpy as np
 import numexpr as ne
 import sympy as sp
 
-import obstacles
-from constants import *
+import code.obstacles as obstacles
+from code.constants import *
 
 # Convenience
 _w = w[:, np.newaxis, np.newaxis]
@@ -34,6 +34,10 @@ class Model(abc.ABC):
         self.dt = self.dx = 1 / self.N
         self.nu = self.Uin * self.N / self.Re
         self.omega = 1 / (3 * self.nu + 0.5)
+
+        self.obstacle_name = obstacle
+        self.obstacle_theta = theta
+        self.obstacle_size = size
 
         self.init()
 
@@ -247,11 +251,6 @@ class MRT(Model):
         sm = 2 - self.omega
         self.S = np.array([ 0, sp, sp, 0, sm, 0, sm, sp, sp])
         self.S = self.S[:, np.newaxis, np.newaxis]
-
-        # self.uin = np.fromfunction(
-        #     lambda y: self.Uin * (4 / self.N**2) * y * (self.N - y),
-        #     (self.N,))[1:-1]
-
 
         self.reset()
 
@@ -477,4 +476,3 @@ class PyLBM(Model):
 
     def reset(self):
         pass
-

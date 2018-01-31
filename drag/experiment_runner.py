@@ -1,8 +1,11 @@
+#!/usr/bin/env python3
+
 import itertools
 import subprocess
 
 import numpy as np
 
+program = './coefficients.py'
 
 class ExperimentGroup():
     def __init__(self, name, var):
@@ -50,7 +53,7 @@ class Experiment():
 
     def generate_args(self):
         return [
-            "./drag.py",
+            program,
             "-mmrt",
             f"-r{self.r}",
             f"-R{self.Re}",
@@ -65,19 +68,33 @@ class Experiment():
 if __name__ == "__main__":
     experiments = [
         # ExperimentGroup('results/reynolds_circle.txt', {
-        #     'shape': ['circle'],
-        #     'Re': np.linspace(10, 1000, 100)
+        #     'shape': ['circle', 'rect', 'triangle'],
+        #     'time': [40],
+        #     'Re': np.linspace(17, 18, 5)
         # }),
         # ExperimentGroup('results/velocity.txt', {
-        #     'shape': ['circle', 'rect'],
+        #     'shape': ['circle', 'rect', 'halfcircle', 'triangle', 'moon', 'bullet'],
         #     'Uin': np.arange(1, 16) / 100,
-        #     'time': [240],
-        #     'Re': [??],
+        #     'time': [180],
+        #     'Re': [17.5],
         # }),
         # ExperimentGroup('results/size.txt', {
         # 'shape': ['circle', 'rect', 'halfcircle', 'triangle', 'moon', 'bullet'],
         #     'size': [1/32, 1/24, 1/16, 1/12, 1/8, 1/6, 1/4, 1/3],
-        #     'Re': [??],
+        #     'time': [40],
+        #     'Re': [17.5],
+        # }),
+        ExperimentGroup('lel.txt', {
+            'shape': ['rect', 'circle'],
+            'Re': [105],
+            'theta': range(0, 181, 5)
+        }),
+        
+        # ExperimentGroup('results/csize.txt', {
+        # 'shape': ['circle'],
+        #     'size': np.linspace(1/32, 0.6, 100),
+        #     'time': [40],
+        #     'Re': [17.5],
         # }),
     ]
 

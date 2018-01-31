@@ -4,7 +4,7 @@ import numpy as np
 from skimage.draw import circle, polygon
 from scipy.ndimage.filters import minimum_filter, maximum_filter
 
-import util
+import code.util as util
 
 # Just for convenience
 l_and, l_not = np.logical_and, np.logical_not
