@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """This module defines the graphical display of the models using opengl
 
 This file is heaviliy based on the sample provided by Dr Gabor.
@@ -11,6 +12,7 @@ from matplotlib import cm
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
+
 
 # Constants, Globals
 name = 'Drag'  # Window name
@@ -58,7 +60,8 @@ def display():
     frac = (plotvar[:] - minvar) / (maxvar - minvar)
     icol = frac * ncol
     plot_rgba[:] = cmap_rgba[icol.astype(np.int)]
-    plot_rgba[model.obstacle.T.flatten()] = 0xFF000000  #Color code of black
+    plot_rgba[
+        model.obstacle_mask.T.flatten()] = 0xFF000000  #Color code of black
 
     # Fill the pixel buffer with the plot_rgba array
     glBufferData(GL_PIXEL_UNPACK_BUFFER, plot_rgba.nbytes, plot_rgba,

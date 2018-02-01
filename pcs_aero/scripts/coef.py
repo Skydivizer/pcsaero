@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
-"""Run this script to calculate the drag and life coefficient of 2d objects in
-a 1x1 pipe.
-"""
 import numpy as np
 
-import code.args as args
-import code.models as models
+import pcs_aero.args as args
+import pcs_aero.models as models
 
 
 if __name__ == "__main__":
-    # Handle command line arguments
     parser = args.ModelArgParser(
         description="Program that tries to calculate the drag and lift "
         "coefficient of 2d objects in a 1x1 pipe.")

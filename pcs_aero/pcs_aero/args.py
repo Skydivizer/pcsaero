@@ -1,61 +1,84 @@
+# -*- coding: utf-8 -*-
+"""This module defines model argument parsing tools, to simplify and unify
+the scripts command line argument integration.
+"""
+
 import argparse
 
-import code.models as models
-import code.obstacles as obstacles
+import pcs_aero.models as models
+import pcs_aero.obstacles as obstacles
 
 # To not overflow the help interface of arugment parser only the main obstacle
 # names are # shown as possible options
-onames = [l[0] for l in obstacles.names_lists]
-onames_map = {n: l[0] for l in obstacles.names_lists for n in l}
+_onames = [l[0] for l in obstacles.names_lists]
+_onames_map = {n: l[0] for l in obstacles.names_lists for n in l}
+
 
 # Defines the type for argument parser
-def onames_type(string):
+def _onames_type(string):
     string = str.lower(string)
     try:
-        return onames_map[string]
+        return _onames_map[string]
     except KeyError:
         raise TypeError(string, 'not a known obstacle name')
 
 
 class ModelArgParser(argparse.ArgumentParser):
+    """An argument parser that always parsed the arguments required to identify
+    a model.
+
+    In essence this class adds some flags that will always be passed.
+
+    Flags:
+        '-m', '--model': Model class name.
+        '-r', '--resolution': Resolution of model.
+        '-o', '--obstacle': Obstacle name.
+        '-t', '--theta': Obstacle angle of attack.
+        '-u', '--stream_velocity': Uin of model.
+        '-s', '--size': Size of obstacle.
+        '-T', '--time': The model will be ran at least so far in simulation
+            time before being returned from parse_args.
+        '-l', '--load': Ignore most other arguments and just load a model from
+            some file.
+
+    Note: The only other arugment that does something when the load flag is 
+        parsed is the time argument.
+    """
+
     def __init__(self, *args, **kwargs):
         super(ModelArgParser, self).__init__(*args, **kwargs)
-        ### Uncomment your own risk
-        # self.add_argument(
-        #     "-m",
-        #     "--model",
-        #     help=
-        #     "The model to use. All models use lattice boltzmann methods, the "
-        #     "difference lies in the implementation. [srt] single relaxation time. "
-        #     "[mrt] multiple relaxation times [pylbm] mrt model that wraps pyLBM",
-        #     type=str.lower,
-        #     choices=[
-        #         'srt',
-        #         'mrt',
-        #         'pylbm'],
-        #     default='mrt')
+        self.add_argument(
+            "-m",
+            "--model",
+            help=
+            "The model to use. All models use lattice boltzmann methods, the "
+            "difference lies in the implementation. [srt] single relaxation time. "
+            "[mrt] multiple relaxation times [pylbm] mrt model that wraps pyLBM",
+            type=str.lower,
+            choices=['srt', 'mrt', 'trt'],
+            default='trt')
 
         self.add_argument(
             "-r",
             "--resolution",
             help='Number of cells per 1 characteristic length',
             type=int,
-            default=256)
+            default=92)
 
         self.add_argument(
             "-R",
             "--reynolds",
             help='Reynolds number',
             type=float,
-            default=220)
+            default=17.5)
 
         self.add_argument(
             "-o",
             "--obstacle",
             help='The obstacle to calculate the drag coefficient of.',
-            type=onames_type,
-            choices=onames,
-            default=onames[0])
+            type=_onames_type,
+            choices=_onames,
+            default=_onames[0])
 
         self.add_argument(
             "-t",
@@ -79,25 +102,25 @@ class ModelArgParser(argparse.ArgumentParser):
             help='Reference size (height) of obstacle in characteristic units.',
             default=1 / 8)
 
-
-
         self.add_argument(
             '-T',
             '--time',
             type=float,
             help="Minimum time the simulation has to be ran.",
-            default=0
-            )
+            default=0)
 
         self.add_argument(
             '-l',
             '--load',
             type=str,
             help='Load model from file using pickle. This overrides all other '
-            'settings.'
-        )
+            'settings.')
 
     def parse_args(self, *args, **kwargs):
+        """Parse the command line arguments.
+
+        Returns: (args, model)
+        """
         args = super(ModelArgParser, self).parse_args(*args, **kwargs)
 
         if args.load:
@@ -110,9 +133,9 @@ class ModelArgParser(argparse.ArgumentParser):
             model = {
                 "srt": models.SRT,
                 "mrt": models.MRT,
-                "pylbm": models.PyLBM,
-            }['mrt'](
-            # }[args.model](
+                "trt": models.TRT,
+            }[args.model](
+                # }[args.model](
                 Re=args.reynolds,
                 resolution=args.resolution,
                 obstacle=args.obstacle,

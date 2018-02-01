@@ -1,10 +1,13 @@
-"This module defines some lbm constants that are used."
+# -*- coding: utf-8 -*-
+"""This module defines some lbm constants that can be used in the models."""
 import numpy as np
 
 # Velocity vectors
-e = np.array([[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [-1, 1], [-1, -1], [1, -1]])
+e = np.array([[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [-1, 1],
+              [-1, -1], [1, -1]])
 # Their weights
-w = np.array([ 4/9, 1/9, 1/9, 1/9, 1/9, 1/36, 1/36, 1/36, 1/36])
+w = np.array(
+    [4 / 9, 1 / 9, 1 / 9, 1 / 9, 1 / 9, 1 / 36, 1 / 36, 1 / 36, 1 / 36])
 
 # Cardinality to index
 idx_C = 0
