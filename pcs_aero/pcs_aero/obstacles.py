@@ -197,4 +197,11 @@ class Obstacle(object):
         else:
             raise ValueError("Unknown obstacle name", name)
 
+        if name not in none_names and not np.any(mask):
+            # Size is probably to small to mask a single cell.
+
+            # Now either we mask a single cell or not cell at all, either way
+            # the result is not really meaningful.
+            raise ValueError('Obstacle parameters result in empty mask')
+
         return cls(mask)

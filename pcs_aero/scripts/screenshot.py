@@ -18,15 +18,18 @@ def make_image(data, odata, cm=cm.coolwarm):
     data[[0, 1, 2]] = data[[2, 1, 0]]
 
     image = (cm(data) * 255).astype(np.uint8)
-
+    
     image[odata, :] = [0, 0, 0, 255]
 
-    return image
+    return image[::-1]
 
 
 if __name__ == "__main__":
     # Handle command line arguments
-    parser = args.ModelArgParser()
+    parser = args.ModelArgParser(description="Create a screenshot of some "
+                                 "simulation.")
+
+    parser.add_argument('file_name', type=str, help='File name to save as.')
 
     args, model = parser.parse_args()
 
@@ -36,4 +39,4 @@ if __name__ == "__main__":
     vi = make_image(v, o)
 
     img = Image.fromarray(vi, 'RGBA')
-    img.save('screenshot.png')
+    img.save(args.file_name)

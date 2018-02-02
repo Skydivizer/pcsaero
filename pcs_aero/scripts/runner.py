@@ -3,17 +3,11 @@
 import argparse
 import subprocess
 
-import numpy as np
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Brute force experiment runner.')
-
-    parser.add_argument('script', help='Script to use.')
     parser.add_argument('config', help='Config file to use')
     
     args = parser.parse_args()    
-
-    program = args.script
 
     # This works for now...
     exec(open(args.config).read())

@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='pcs_aero',
-    version='0.1',
+    version='0.1.1',
     description='Drag and lift coefficient calculation in a D2Q9 LBM models.',
     author='Sebastian Melzer',
     author_email='pcs_aero@skydivizer.com',
